@@ -48,10 +48,11 @@ CRON_SECRET=(your random string)
 - Both are on Vercel, so DNS doesn't change; HTTPS reissues automatically.
 
 ## 6. Make reminders fire on time
-Vercel's free plan only runs cron once/day. Pick one:
-- Upgrade to Vercel **Pro** (the every-minute cron in `vercel.json` then works as-is), OR
-- Free: at **https://cron-job.org**, create a job that GETs this every minute:
-  `https://aryaai.online/api/dispatch?secret=YOUR_CRON_SECRET`
+Vercel's free (Hobby) plan only allows a once-a-day cron, so `vercel.json` is set to
+daily (a free safety net). For reminders to fire on time you need a per-minute check:
+- **Free (recommended):** at **https://cron-job.org**, create a job that GETs this
+  every minute:  `https://aryaai.online/api/dispatch?secret=YOUR_CRON_SECRET`
+- Or upgrade to Vercel **Pro** and change the `vercel.json` schedule to `* * * * *`.
 
 ## 7. Turn it on (each device)
 - Open **aryaai.online → Settings**, paste your **Gemini key**.
