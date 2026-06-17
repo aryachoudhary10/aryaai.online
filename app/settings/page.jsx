@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getKey, setKey, getModel, setModel, hasKey } from "@/lib/understand";
+import { getKey, setKey, getModel, setModel, hasKey, testKey } from "@/lib/understand";
 import { listMemories, clearAll, exportJSON } from "@/lib/memory";
 import { enableNotifications, testNotification, notifEnabled, notifSupported, pushConfigured } from "@/lib/push";
 
@@ -11,6 +11,13 @@ export default function SettingsPage() {
   const [count, setCount] = useState(0);
   const [notif, setNotif] = useState("loading"); // loading | on | off | unsupported
   const [notifMsg, setNotifMsg] = useState("");
+  const [keyMsg, setKeyMsg] = useState("");
+
+  async function checkKey() {
+    setKeyMsg("Testing…");
+    try { setKey(key); setModel(model); const r = await testKey(); setKeyMsg(`✓ Working — ${r.model}`); }
+    catch (e) { setKeyMsg(`✗ Not working: ${e.message}`); }
+  }
 
   useEffect(() => {
     setK(getKey()); setM(getModel()); setCount(listMemories().length);
@@ -61,8 +68,9 @@ export default function SettingsPage() {
 
         <div className="row" style={{ marginTop: 18 }}>
           <button className="go" onClick={save}>{saved ? "Saved ✓" : "Save"}</button>
-          <span className="set-status">{hasKey() || key ? "Gemini connected" : "Using built-in parser"}</span>
+          <button className="go ghost" onClick={checkKey}>Test key</button>
         </div>
+        {keyMsg && <div className="set-hint" style={{ marginTop: 10 }}>{keyMsg}</div>}
       </div>
 
       <div className="set-card">
