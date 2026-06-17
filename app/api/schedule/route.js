@@ -17,7 +17,7 @@ export async function POST(req) {
     for (const it of items) {
       const when = Date.parse(it.fireAt);
       if (!it.id || Number.isNaN(when)) continue;
-      await redis.set(`arya:notif:${it.id}`, { deviceId, title: it.title || "Arya", body: it.body || "", url: it.url || "/" });
+      await redis.set(`arya:notif:${it.id}`, { deviceId, title: it.title || "Arya", body: it.body || "", url: it.url || "/", recur: it.recur || null, at: when });
       await redis.zadd(DUE, { score: when, member: it.id });
       queued++;
     }

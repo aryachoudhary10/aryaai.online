@@ -34,6 +34,7 @@ export async function GET(req) {
   const dueIds = await redis.zrange(DUE, 0, now, { byScore: true });
   let sent = 0, gone = 0;
 
+  let requeued = 0;
   for (const id of dueIds) {
     const rec = await redis.get(`arya:notif:${id}`);
     if (rec) {
@@ -46,9 +47,27 @@ export async function GET(req) {
           if (err.statusCode === 404 || err.statusCode === 410) { await redis.del(SUB(rec.deviceId)); gone++; }
         }
       }
+      // recurring → schedule the next occurrence (reuses the same copy)
+      if (rec.recur) {
+        const next = nextFire(rec.recur, rec.at || now);
+        if (next) {
+          const nid = crypto.randomUUID();
+          await redis.set(`arya:notif:${nid}`, { ...rec, at: next });
+          await redis.zadd(DUE, { score: next, member: nid });
+          requeued++;
+        }
+      }
     }
     await redis.del(`arya:notif:${id}`);
     await redis.zrem(DUE, id);
   }
-  return NextResponse.json({ ok: true, checked: dueIds.length, sent, gone });
+  return NextResponse.json({ ok: true, checked: dueIds.length, sent, gone, requeued });
+}
+
+function nextFire(recur, lastMs) {
+  const d = new Date(lastMs);
+  if (recur.type === "daily") { d.setDate(d.getDate() + 1); return d.getTime(); }
+  if (recur.type === "weekly") { d.setDate(d.getDate() + 7); return d.getTime(); }
+  if (recur.type === "yearly") { d.setFullYear(d.getFullYear() + 1); return d.getTime(); }
+  return null;
 }
