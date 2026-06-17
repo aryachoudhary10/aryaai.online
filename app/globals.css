@@ -94,6 +94,12 @@ a{color:inherit;text-decoration:none}
 .entry .e-you{font-size:15px}
 .entry .e-meta{font-size:12.5px;color:var(--faint);margin-top:5px}
 
+.sched{display:flex;flex-direction:column;gap:10px}
+.schic{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:14px;padding:12px 14px}
+.sc-when{font-size:12.5px;color:var(--accent);font-weight:600}
+.sc-title{font-size:15px;margin-top:2px}
+.sc-body{font-size:13px;color:var(--muted);margin-top:1px}
+
 /* ask answer */
 .answer{width:100%;animation:fade .4s ease}
 .answer .a-main{font-size:17px;line-height:1.55}

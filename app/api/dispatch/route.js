@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import webpush from "web-push";
-import { getRedis, DUE, SUB } from "@/lib/server/redis";
+import { getRedis, DUE, SUB, DEV } from "@/lib/server/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,9 +54,11 @@ export async function GET(req) {
           const nid = crypto.randomUUID();
           await redis.set(`arya:notif:${nid}`, { ...rec, at: next });
           await redis.zadd(DUE, { score: next, member: nid });
+          if (rec.deviceId) await redis.sadd(DEV(rec.deviceId), nid);
           requeued++;
         }
       }
+      if (rec.deviceId) await redis.srem(DEV(rec.deviceId), id);
     }
     await redis.del(`arya:notif:${id}`);
     await redis.zrem(DUE, id);

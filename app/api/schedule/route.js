@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRedis, DUE } from "@/lib/server/redis";
+import { getRedis, DUE, DEV } from "@/lib/server/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +19,7 @@ export async function POST(req) {
       if (!it.id || Number.isNaN(when)) continue;
       await redis.set(`arya:notif:${it.id}`, { deviceId, title: it.title || "Arya", body: it.body || "", url: it.url || "/", recur: it.recur || null, at: when });
       await redis.zadd(DUE, { score: when, member: it.id });
+      await redis.sadd(DEV(deviceId), it.id);
       queued++;
     }
     return NextResponse.json({ ok: true, queued });
