@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import webpush from "web-push";
-import { redis, DUE, SUB } from "@/lib/server/redis";
+import { getRedis, DUE, SUB } from "@/lib/server/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +29,7 @@ export async function GET(req) {
   if (!authorized(req)) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   if (!initVapid()) return NextResponse.json({ ok: false, error: "VAPID keys not configured" }, { status: 500 });
 
+  const redis = getRedis();
   const now = Date.now();
   const dueIds = await redis.zrange(DUE, 0, now, { byScore: true });
   let sent = 0, gone = 0;

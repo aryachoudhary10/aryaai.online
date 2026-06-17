@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // node:sqlite is a built-in module; nothing to bundle.
+  // keep these Node libs out of the webpack bundle for route handlers
+  experimental: { serverComponentsExternalPackages: ["web-push", "@upstash/redis"] },
 };
 export default nextConfig;

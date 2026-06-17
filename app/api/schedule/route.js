@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { redis, DUE } from "@/lib/server/redis";
+import { getRedis, DUE } from "@/lib/server/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +12,7 @@ export async function POST(req) {
     if (!deviceId || !Array.isArray(items) || !items.length) {
       return NextResponse.json({ ok: false, error: "Missing deviceId/items" }, { status: 400 });
     }
+    const redis = getRedis();
     let queued = 0;
     for (const it of items) {
       const when = Date.parse(it.fireAt);

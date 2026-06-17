@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { redis, SUB } from "@/lib/server/redis";
+import { getRedis, SUB } from "@/lib/server/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,6 +9,7 @@ export async function POST(req) {
   try {
     const { deviceId, subscription } = await req.json();
     if (!deviceId || !subscription) return NextResponse.json({ ok: false, error: "Missing deviceId/subscription" }, { status: 400 });
+    const redis = getRedis();
     await redis.set(SUB(deviceId), subscription);
     return NextResponse.json({ ok: true });
   } catch (e) {
