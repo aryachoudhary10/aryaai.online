@@ -1,688 +1,129 @@
-/* ---------------------------------------------------------------------------
-   Rephrase — design tokens.
-
-   Palette is built around the copy-editor's non-photo blue pencil: the tool
-   traditionally used to mark up manuscripts because the colour doesn't
-   reproduce on a photostat. Deep pencil blue carries actions, the pale
-   non-photo blue carries highlights and fills.
-
-   Every colour is declared on bare :root first, then redefined per theme, so
-   nothing is left undefined in the un-stamped "system" state.
---------------------------------------------------------------------------- */
-
-:root {
-  --ground:       #f4f7f8;
-  --surface:      #ffffff;
-  --surface-sunk: #eceff1;
-  --ink:          #11171b;
-  --ink-muted:    #586874;
-  --ink-faint:    #8494a0;
-  --border:       #d9e2e7;
-  --border-strong:#bccbd3;
-  --accent:       #17607f;
-  --accent-hover: #0f4a63;
-  --accent-ink:   #ffffff;
-  --accent-soft:  #d6edf8;
-  --accent-edge:  #9ed3ec;
-  --danger:       #a8331f;
-  --danger-soft:  #fbe6e1;
-  --ok:           #1f6b4f;
-
-  --radius:    10px;
-  --radius-sm: 7px;
-  --shadow:    0 1px 2px rgba(17, 23, 27, .06), 0 6px 18px -8px rgba(17, 23, 27, .18);
-
-  --font-ui:   "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-read: "Newsreader", ui-serif, Georgia, "Times New Roman", serif;
-
-  --bar-h: 64px;
-
-  color-scheme: light;
+:root{
+  /* Sage-dusk — a calm, low-arousal palette for emptying your mind.
+     Deep warm-charcoal-green = safe & cocooning; soft off-white = low glare;
+     sage = restorative, balanced; sand = a little warmth. */
+  --bg:#161a18;
+  --bg-soft:#1a201d;
+  --panel:#1e2522;
+  --panel-2:#232b27;
+  --line:#2b332e;
+  --line-soft:#252c28;
+  --text:#e8ebe5;
+  --muted:#9ba79f;
+  --faint:#69736c;
+  --accent:#a9cbb6;
+  --accent-deep:#7fae97;
+  --sand:#d8b894;
+  --radius:20px;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --ground:       #0d1215;
-    --surface:      #161d22;
-    --surface-sunk: #10171b;
-    --ink:          #e6edf2;
-    --ink-muted:    #93a3af;
-    --ink-faint:    #6b7d89;
-    --border:       #27313a;
-    --border-strong:#3a4752;
-    --accent:       #6bc2e8;
-    --accent-hover: #8fd3f1;
-    --accent-ink:   #06222e;
-    --accent-soft:  #16323f;
-    --accent-edge:  #27566b;
-    --danger:       #ef9482;
-    --danger-soft:  #3a1d17;
-    --ok:           #6ec3a0;
-    --shadow:       0 1px 2px rgba(0,0,0,.4), 0 6px 18px -8px rgba(0,0,0,.6);
-
-    color-scheme: dark;
-  }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:
+    radial-gradient(900px 600px at 50% -10%, rgba(169,203,182,.06), transparent 60%),
+    var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
 }
-
-:root[data-theme="dark"] {
-  --ground:       #0d1215;
-  --surface:      #161d22;
-  --surface-sunk: #10171b;
-  --ink:          #e6edf2;
-  --ink-muted:    #93a3af;
-  --ink-faint:    #6b7d89;
-  --border:       #27313a;
-  --border-strong:#3a4752;
-  --accent:       #6bc2e8;
-  --accent-hover: #8fd3f1;
-  --accent-ink:   #06222e;
-  --accent-soft:  #16323f;
-  --accent-edge:  #27566b;
-  --danger:       #ef9482;
-  --danger-soft:  #3a1d17;
-  --ok:           #6ec3a0;
-  --shadow:       0 1px 2px rgba(0,0,0,.4), 0 6px 18px -8px rgba(0,0,0,.6);
-
-  color-scheme: dark;
-}
-
-/* --- reset ------------------------------------------------------------- */
-
-*, *::before, *::after { box-sizing: border-box; }
-
-html, body {
-  height: 100%;
-  margin: 0;
-}
-
-html {
-  /* Stops the whole page rubber-banding on iOS while the sheet scrolls. */
-  overscroll-behavior-y: none;
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  background: var(--ground);
-  color: var(--ink);
-  font-family: var(--font-ui);
-  font-size: 16px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -webkit-tap-highlight-color: transparent;
-}
-
-button, input, textarea, select {
-  font: inherit;
-  color: inherit;
-}
-
-button { cursor: pointer; }
-
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: .01ms !important;
-    transition-duration: .01ms !important;
-  }
-}
-
-/* --- shell ------------------------------------------------------------- */
-
-.app {
-  min-height: 100%;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  padding-top: env(safe-area-inset-top, 0px);
-}
-
-.wrap {
-  width: 100%;
-  max-width: 680px;
-  margin-inline: auto;
-  padding-inline: 16px;
-}
-
-/* --- header ------------------------------------------------------------ */
-
-.top {
-  position: sticky;
-  top: env(safe-area-inset-top, 0px);
-  z-index: 20;
-  background: color-mix(in srgb, var(--ground) 88%, transparent);
-  backdrop-filter: saturate(1.6) blur(12px);
-  border-bottom: 1px solid var(--border);
-}
-
-.top-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 52px;
-  padding-block: 8px;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-weight: 600;
-  font-size: 16px;
-  letter-spacing: -0.01em;
-  margin-right: auto;
-}
-
-/* The mark is two stacked rules, long then short: the proofreader's gesture
-   for "replace this line with a tighter one". */
-.mark {
-  width: 22px;
-  height: 22px;
-  flex: none;
-  display: grid;
-  align-content: center;
-  gap: 4px;
-  padding: 4px 3px;
-  border-radius: 6px;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-edge);
-}
-.mark i { display: block; height: 2px; border-radius: 1px; background: var(--accent); }
-.mark i:first-child { width: 100%; }
-.mark i:last-child  { width: 60%; }
-
-.icon-btn {
-  width: 40px;
-  height: 40px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--ink-muted);
-  transition: color .15s, border-color .15s;
-}
-.icon-btn:hover { color: var(--ink); border-color: var(--border-strong); }
-
-/* --- tone chips -------------------------------------------------------- */
-
-.tones {
-  display: flex;
-  gap: 7px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-block: 10px;
-  /* Bleed to the screen edge so the row reads as scrollable on a phone. */
-  margin-inline: -16px;
-  padding-inline: 16px;
-  scroll-snap-type: x proximity;
-}
-.tones::-webkit-scrollbar { display: none; }
-
-.chip {
-  flex: none;
-  min-height: 36px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--ink-muted);
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  scroll-snap-align: start;
-  transition: background .15s, color .15s, border-color .15s;
-}
-.chip:hover { border-color: var(--border-strong); color: var(--ink); }
-.chip[aria-pressed="true"] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
-}
-
-.tone-hint {
-  font-size: 13px;
-  color: var(--ink-faint);
-  padding-bottom: 12px;
-  min-height: 19px;
-}
-
-/* --- editor ------------------------------------------------------------ */
-
-main { flex: 1; padding-bottom: 24px; }
-
-.editor {
-  position: relative;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-}
-
-.editor:focus-within { border-color: var(--accent-edge); }
-
-textarea {
-  display: block;
-  width: 100%;
-  min-height: 132px;
-  max-height: 42vh;
-  padding: 14px 14px 8px;
-  border: 0;
-  border-radius: var(--radius);
-  background: transparent;
-  resize: none;
-  /* 16px minimum or iOS Safari zooms the viewport on focus. */
-  font-size: 16px;
-  line-height: 1.55;
-}
-textarea:focus { outline: none; }
-textarea::placeholder { color: var(--ink-faint); }
-
-.editor-foot {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px 8px 14px;
-  font-size: 12.5px;
-  color: var(--ink-faint);
-  font-variant-numeric: tabular-nums;
-}
-.count-over { color: var(--danger); font-weight: 600; }
-.foot-actions { margin-left: auto; display: flex; gap: 2px; }
-
-.ghost {
-  min-height: 34px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--ink-muted);
-  font-size: 13px;
-  font-weight: 500;
-}
-.ghost:hover { background: var(--surface-sunk); color: var(--ink); }
-.ghost:disabled { opacity: .4; cursor: default; background: transparent; }
-
-/* --- results ----------------------------------------------------------- */
-
-.results { display: grid; gap: 10px; margin-top: 20px; }
-
-.results-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-.results-head .src { margin-left: auto; letter-spacing: 0; text-transform: none; font-weight: 400; }
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 14px 10px;
-  transition: border-color .15s;
-}
-.card:hover { border-color: var(--border-strong); }
-
-/* The rewrite is set in the serif so it reads as the finished copy, visually
-   distinct from the sans-serif draft you typed above. */
-.card p {
-  margin: 0;
-  font-family: var(--font-read);
-  font-size: 17px;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.card-foot {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-}
-.card-n {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-faint);
-  font-variant-numeric: tabular-nums;
-  margin-right: auto;
-  letter-spacing: .06em;
-}
-
-/* --- states ------------------------------------------------------------ */
-
-.skeleton { padding: 14px; }
-.skeleton span {
-  display: block;
-  height: 13px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, var(--surface-sunk) 25%, var(--border) 50%, var(--surface-sunk) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.3s linear infinite;
-  margin-bottom: 9px;
-}
-.skeleton span:nth-child(2) { width: 92%; }
-.skeleton span:nth-child(3) { width: 64%; margin-bottom: 0; }
-@keyframes shimmer { to { background-position: -200% 0; } }
-
-.notice {
-  display: flex;
-  gap: 9px;
-  padding: 12px 14px;
-  border-radius: var(--radius);
-  font-size: 14px;
-  background: var(--danger-soft);
-  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
-  color: var(--danger);
-}
-
-.empty {
-  margin-top: 28px;
-  text-align: center;
-  color: var(--ink-faint);
-  font-size: 14px;
-  line-height: 1.6;
-}
-.empty kbd {
-  font: inherit;
-  font-size: 12px;
-  padding: 2px 6px;
-  border: 1px solid var(--border-strong);
-  border-bottom-width: 2px;
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--ink-muted);
-}
-
-/* --- action bar -------------------------------------------------------- */
-
-/* Fixed to the bottom so the primary action stays in the thumb zone on a
-   phone. --kb is set from visualViewport so the bar rides above the on-screen
-   keyboard instead of being buried under it. */
-.bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: var(--kb, 0px);
-  z-index: 30;
-  background: color-mix(in srgb, var(--ground) 92%, transparent);
-  backdrop-filter: saturate(1.6) blur(12px);
-  border-top: 1px solid var(--border);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  transition: bottom .18s ease-out;
-}
-
-.bar-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-block: 10px;
-}
-
-.go {
-  flex: 1;
-  min-height: 48px;
-  border: 0;
-  border-radius: var(--radius);
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  transition: background .15s;
-}
-.go:hover:not(:disabled) { background: var(--accent-hover); }
-.go:disabled { opacity: .45; cursor: default; }
-
-.spin {
-  width: 16px;
-  height: 16px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Clears the fixed bar so the last card is never trapped underneath it. */
-.bar-space { height: calc(var(--bar-h) + env(safe-area-inset-bottom, 0px)); }
-
-/* --- toast ------------------------------------------------------------- */
-
-.toast {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(var(--kb, 0px) + var(--bar-h) + env(safe-area-inset-bottom, 0px) + 12px);
-  z-index: 40;
-  padding: 9px 16px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--ground);
-  font-size: 13.5px;
-  font-weight: 500;
-  box-shadow: var(--shadow);
-  animation: rise .2s ease-out;
-  pointer-events: none;
-  max-width: calc(100vw - 32px);
-}
-@keyframes rise { from { opacity: 0; transform: translate(-50%, 6px); } }
-
-/* --- narrow phones ----------------------------------------------------- */
-
-@media (max-width: 360px) {
-  .brand .word { display: none; }      /* mark only, reclaim the width */
-  .chip { padding: 0 12px; font-size: 13.5px; }
-  .card p { font-size: 16px; }
-}
-
-/* --- landscape phone: vertical space is the scarce axis ---------------- */
-
-@media (max-height: 480px) and (orientation: landscape) {
-  textarea { min-height: 84px; max-height: 30vh; }
-  .tones { padding-block: 7px; }
-  .tone-hint { display: none; }
-}
-
-/* --- tablet and up ----------------------------------------------------- */
-
-@media (min-width: 720px) {
-  .bar {
-    position: static;
-    background: none;
-    backdrop-filter: none;
-    border-top: 0;
-    padding-bottom: 0;
-  }
-  .bar-row { padding-block: 0; margin-top: 16px; }
-  .bar-space { display: none; }
-  .toast { bottom: 24px; }
-  .go { flex: none; padding-inline: 28px; }
-}
-
-/* --- /tools: prose layout ---------------------------------------------- */
-
-.prose { padding-top: 24px; }
-
-.prose h1 {
-  margin: 0 0 10px;
-  font-size: 27px;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-}
-
-.prose .lede {
-  margin: 0 0 4px;
-  font-size: 16px;
-  color: var(--ink-muted);
-  max-width: 62ch;
-}
-
-.prose section {
-  margin-top: 34px;
-  padding-top: 22px;
-  border-top: 1px solid var(--border);
-}
-
-.prose h2 {
-  margin: 0 0 10px;
-  font-size: 17px;
-  letter-spacing: -0.01em;
-}
-
-.prose p {
-  margin: 0 0 12px;
-  max-width: 62ch;
-  color: var(--ink-muted);
-  font-size: 14.5px;
-}
-
-.prose b { color: var(--ink); font-weight: 600; }
-
-.prose code {
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: .9em;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: var(--surface-sunk);
-  color: var(--ink);
-}
-
-.prose kbd {
-  font: inherit;
-  font-size: 12px;
-  padding: 2px 6px;
-  border: 1px solid var(--border-strong);
-  border-bottom-width: 2px;
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--ink);
-}
-
-.callout {
-  padding: 11px 14px;
-  border-radius: var(--radius);
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-edge);
-  color: var(--ink) !important;
-  font-size: 14px;
-}
-
-.field-label {
-  display: block;
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  margin: 18px 0 6px;
-}
-
-.select {
-  width: 100%;
-  max-width: 420px;
-  min-height: 44px;
-  padding: 0 12px;
-  /* 16px keeps iOS Safari from zooming the viewport when the picker opens. */
-  font-size: 16px;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-}
-
-.drag-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin: 16px 0 6px !important;
-}
-
-/* Reads as a draggable object rather than a link, because that is what it is. */
-.drag {
-  display: inline-flex;
-  align-items: center;
-  min-height: 42px;
-  padding: 0 18px;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-size: 14.5px;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: grab;
-  box-shadow: var(--shadow);
-}
-.drag:active { cursor: grabbing; }
-
-.drag-hint { font-size: 13px; color: var(--ink-faint); }
-
-/* Dragging needs a bookmarks bar, which phones do not have -- the <details>
-   below carries the phone instructions instead. */
-@media (max-width: 719px) {
-  .drag-row { display: none !important; }
-}
-
-.prose details {
-  margin-top: 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-}
-.prose summary {
-  padding: 11px 14px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  list-style-position: inside;
-}
-.prose details[open] summary { border-bottom: 1px solid var(--border); }
-.prose details ol {
-  margin: 12px 0;
-  padding-inline-start: 34px;
-  color: var(--ink-muted);
-  font-size: 14px;
-}
-.prose details ol li { margin-bottom: 6px; }
-
-.copybox { padding: 0 14px 14px; }
-.copybox textarea {
-  width: 100%;
-  min-height: 0;
-  max-height: none;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-sunk);
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 12px;
-  line-height: 1.45;
-  resize: vertical;
-  word-break: break-all;
-}
-.copybox .ghost { margin-top: 6px; border: 1px solid var(--border); }
-
-a.brand { text-decoration: none; color: inherit; }
-
-@media (min-width: 720px) {
-  .prose h1 { font-size: 32px; }
-  .prose .bar-space { display: none; }
-}
+a{color:inherit;text-decoration:none}
+.container{max-width:660px;margin:0 auto;padding:0 18px}
+
+/* slim top bar */
+.topbar{position:sticky;top:0;z-index:20;background:rgba(22,26,24,.8);backdrop-filter:blur(12px);border-bottom:1px solid var(--line-soft);padding-top:env(safe-area-inset-top)}
+.topbar-in{max-width:660px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:54px;padding:0 18px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px;letter-spacing:.2px}
+.brand .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.topnav{display:flex;gap:4px}
+.toplink{font-size:14px;color:var(--muted);padding:7px 12px;border-radius:10px;transition:.15s}
+.toplink:hover,.toplink.active{color:var(--text);background:var(--panel)}
+
+/* no-key nudge + settings */
+.keynudge{display:block;align-self:center;margin-top:8px;font-size:12.5px;color:var(--accent);text-decoration:none;opacity:.85}
+.keynudge:hover{opacity:1}
+.set-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+.set-label{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+.set-input{width:100%;background:var(--bg-soft);border:1px solid var(--line);border-radius:11px;padding:12px 14px;color:var(--text);font:inherit;font-size:15px;outline:none}
+.set-input:focus{border-color:var(--accent-deep)}
+.set-hint{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.5}
+.set-hint a{color:var(--accent);text-decoration:underline}
+.set-hint code{background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px;font-size:12.5px}
+.set-status{color:var(--muted);font-size:13px;align-self:center}
+.go.danger{background:transparent;color:var(--sand);border:1px solid var(--line)}
+
+/* ---------- home: dump / ask ---------- */
+.home{min-height:calc(100svh - 54px);display:flex;flex-direction:column}
+
+/* segmented toggle */
+.seg{align-self:center;display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px;gap:2px;margin:16px auto 6px}
+.seg button{border:none;background:transparent;color:var(--muted);padding:10px 26px;border-radius:999px;font-size:15px;font-weight:600;cursor:pointer;transition:.22s;-webkit-tap-highlight-color:transparent}
+.seg button.active{background:var(--accent);color:#15201a}
+.seg button:active{transform:scale(.97)}
+
+/* scrollable result stream */
+.stream{flex:1 1 auto;width:100%;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:14px 0 6px;-webkit-overflow-scrolling:touch}
+.stream-hint{margin:auto;color:var(--faint);font-size:14.5px;text-align:center;padding:0 28px;line-height:1.6}
+.row{display:flex;gap:8px;margin-top:10px}
+
+/* composer pinned to the bottom (thumb zone) */
+.composer{position:sticky;bottom:0;width:100%;padding:8px 0 calc(12px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 72%,rgba(22,26,24,0))}
+.field{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:6px;transition:border-color .2s, box-shadow .2s}
+.field:focus-within{border-color:var(--accent-deep);box-shadow:0 0 0 4px rgba(169,203,182,.08)}
+.field textarea,.field input{width:100%;background:transparent;border:none;outline:none;color:var(--text);resize:none;font:inherit;font-size:19px;line-height:1.5;padding:16px 16px 8px}
+.field textarea::placeholder,.field input::placeholder{color:var(--faint)}
+.field-bar{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:6px 8px 8px}
+.kbd-hint{margin-right:auto;color:var(--faint);font-size:12px;padding-left:10px}
+.go{border:none;cursor:pointer;border-radius:13px;padding:11px 22px;font-weight:700;font-size:15px;color:#15201a;background:var(--accent);transition:.16s;-webkit-tap-highlight-color:transparent}
+.go:hover{filter:brightness(1.05)}
+.go:active{transform:scale(.97)}
+.go:disabled{opacity:.45;cursor:default}
+.go.sm{padding:8px 16px;font-size:14px}
+.go.ghost{background:var(--panel-2);color:var(--text);border:1px solid var(--line)}
+
+/* gentle confirmation after a dump */
+.saved{display:flex;align-items:flex-start;gap:10px;background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:14px;padding:12px 14px;animation:fade .4s ease}
+.saved .tick{width:22px;height:22px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:rgba(169,203,182,.16);color:var(--accent);font-size:13px;margin-top:1px}
+.saved .s-text{font-size:14px;color:var(--muted)}
+.saved .s-text b{color:var(--text);font-weight:600}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.entries{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.entry{background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:14px;padding:12px 14px}
+.entry .e-you{font-size:15px}
+.entry .e-meta{font-size:12.5px;color:var(--faint);margin-top:5px}
+
+.sched{display:flex;flex-direction:column;gap:10px}
+.schic{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:14px;padding:12px 14px}
+.sc-when{font-size:12.5px;color:var(--accent);font-weight:600}
+.sc-title{font-size:15px;margin-top:2px}
+.sc-body{font-size:13px;color:var(--muted);margin-top:1px}
+
+/* ask answer */
+.answer{width:100%;animation:fade .4s ease}
+.answer .a-main{font-size:17px;line-height:1.55}
+.evidence{margin-top:14px;display:grid;gap:8px}
+.ev{background:var(--bg-soft);border:1px solid var(--line-soft);border-left:3px solid var(--accent);border-radius:11px;padding:11px 14px;font-size:14px;color:var(--muted)}
+.ev .q{color:var(--text)}
+.ev .t{display:block;color:var(--faint);font-size:11.5px;margin-top:4px}
+
+/* generic inner page (timeline) */
+.page{padding:30px 0 90px}
+.page h1{font-size:21px;font-weight:600;margin-bottom:4px}
+.page .sub{color:var(--muted);font-size:14px;margin-bottom:22px}
+.empty{color:var(--faint);font-size:14px;font-style:italic}
+
+/* timeline */
+.tl{position:relative;padding-left:24px}
+.tl::before{content:"";position:absolute;left:6px;top:4px;bottom:4px;width:2px;background:linear-gradient(var(--accent),transparent)}
+.tl-year{font-size:18px;font-weight:600;color:var(--accent);margin:20px 0 8px}
+.tl-year:first-child{margin-top:0}
+.tl-item{position:relative;padding:7px 0}
+.tl-item::before{content:"";position:absolute;left:-22px;top:13px;width:9px;height:9px;border-radius:50%;background:var(--bg);border:2px solid var(--accent)}
+.tl-item .te{font-size:15px}
+.tl-item .td{color:var(--faint);font-size:12.5px}
+
+.spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(21,32,26,.35);border-top-color:#15201a;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+.spin.dark{border:2px solid var(--line);border-top-color:var(--accent)}
+@keyframes sp{to{transform:rotate(360deg)}}

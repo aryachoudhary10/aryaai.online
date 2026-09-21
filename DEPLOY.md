@@ -1,74 +1,73 @@
-# Deploying Rephrase
+# Deploy Arya to aryaai.online — step by step
 
-## 1. Get at least one provider key
+Goal: make Arya the only site at aryaai.online, with working push notifications.
+Do these in order.
 
-**Cloudflare Workers AI** (recommended primary — 10,000 neurons/day free, no card)
+---
 
-1. [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages**
-2. Copy the **Account ID** from the right sidebar → `CF_ACCOUNT_ID`
-3. **My Profile → API Tokens → Create Token → "Workers AI" template** → `CF_API_TOKEN`
+## 1. Folder
+You're already set up at `C:\dev\arya-next` (out of OneDrive). Good.
+> The `data/` folder (arya.sqlite*) is a leftover from an older version — safe to
+> delete. It's gitignored and not used by this app.
 
-**Groq** (recommended fallback — very fast)
+## 2. Create the free accounts / keys
+- **Upstash Redis** → https://console.upstash.com → create a database →
+  copy its **REST URL** and **REST token**.
+- **VAPID keys** → already generated (see section 4).
+- **CRON_SECRET** → make up any long random string.
+- **Gemini key** (entered in the app later) → https://aistudio.google.com/apikey
 
-1. [console.groq.com/keys](https://console.groq.com/keys) → Create API Key → `GROQ_API_KEY`
+## 3. Put it on GitHub
+Make `arya-next` its **own new repo** and publish it
+(GitHub Desktop → Add Local Repository → Publish repository).
+Do NOT reuse the old portfolio repo.
 
-**OpenRouter** (optional second fallback)
+## 4. Create the Vercel project
+- https://vercel.com → Add New → Project → import the new repo (auto-detects Next.js).
+- Add these **Environment Variables** (Settings → Environment Variables):
 
-1. [openrouter.ai/keys](https://openrouter.ai/keys) → `OPENROUTER_API_KEY`
-
-## 2. Rate limiting (do not skip)
-
-An open rephrase endpoint gets scraped within days, and the bill lands on your
-provider keys. Create a free Redis at [console.upstash.com](https://console.upstash.com)
-and copy the REST URL + token into `UPSTASH_REDIS_REST_URL` and
-`UPSTASH_REDIS_REST_TOKEN`.
-
-Defaults are 12 requests/minute and 200/day per IP — tune with
-`RATE_MAX_PER_WINDOW` and `RATE_MAX_PER_DAY`.
-
-If Redis is unreachable the limiter **allows** the request rather than taking
-the app down, so a missing config fails open. Check the values are actually set
-in production.
-
-## 3. Deploy to Vercel
-
-```bash
-npm i -g vercel
-vercel
+```
+VAPID_PUBLIC_KEY=BM79iEB9c4UotakSPUSKqllxnLIhEFXjW8eeu4_WgeqJCBvbcmjpwTa6ZX6-nli5nlNck15YYXVmWEomJiPagAs
+VAPID_PRIVATE_KEY=6W3os7uNmy5qeVAa7mtLhywxyqjE-7DRt_-JOrjIKKU
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=BM79iEB9c4UotakSPUSKqllxnLIhEFXjW8eeu4_WgeqJCBvbcmjpwTa6ZX6-nli5nlNck15YYXVmWEomJiPagAs
+VAPID_SUBJECT=mailto:sukhneers@gmail.com
+UPSTASH_REDIS_REST_URL=(paste from Upstash)
+UPSTASH_REDIS_REST_TOKEN=(paste from Upstash)
+CRON_SECRET=(your random string)
 ```
 
-Then add every variable from `.env.example` under
-**Project → Settings → Environment Variables**, and redeploy.
+- Deploy, then open the temporary `*.vercel.app` URL to confirm it loads.
 
-The API route uses the edge runtime, so it runs in Vercel's edge network with
-no cold start. All providers are plain `fetch` calls and all storage is
-Upstash's REST API, so nothing needs the Node runtime.
+> Security note: these VAPID keys are shared in plain text. Fine to use, but if you
+> want fresh ones, run `npx web-push generate-vapid-keys` and replace all three VAPID values.
 
-## 4. Verify
+## 5. Remove the old site and take the domain
+- Old project (the `portfolio_bot` one) → Settings → Domains → **remove**
+  `aryaai.online` and `www`. (Optionally delete that whole project.)
+- New Arya project → Settings → Domains → **add** `aryaai.online` and `www.aryaai.online`.
+- Both are on Vercel, so DNS doesn't change; HTTPS reissues automatically.
 
-```bash
-curl https://your-app.vercel.app/api/rephrase
-# {"ok":true,"providers":["cloudflare","groq"], ...}
-```
+## 6. Make reminders fire on time
+Vercel's free (Hobby) plan only allows a once-a-day cron, so `vercel.json` is set to
+daily (a free safety net). For reminders to fire on time you need a per-minute check:
+- **Free (recommended):** at **https://cron-job.org**, create a job that GETs this
+  every minute:  `https://aryaai.online/api/dispatch?secret=YOUR_CRON_SECRET`
+- Or upgrade to Vercel **Pro** and change the `vercel.json` schedule to `* * * * *`.
 
-`providers` lists the backends that actually have keys configured. An empty
-array means none of them are set, and every rewrite will return 503.
+## 7. Turn it on (each device)
+- Open **aryaai.online → Settings**, paste your **Gemini key**.
+- **Settings → Enable notifications → Send a test** (arrives in ~5 seconds).
+- On **iPhone**: Share → **Add to Home Screen** first, open it from the icon,
+  THEN enable notifications. (Apple only allows web push from an installed PWA.)
 
-```bash
-curl -X POST https://your-app.vercel.app/api/rephrase \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"hey can u send me that file","tone":"formal"}'
-```
+---
 
-## 5. Install on a phone
+## Done
+aryaai.online is now Arya only, and dated reminders / birthdays push to your phone
+even when the app is closed.
 
-- **Android (Chrome):** menu → *Add to Home screen*. Rephrase then appears in
-  the system share sheet — select text in any app → Share → Rephrase.
-- **iOS (Safari):** Share → *Add to Home Screen*. iOS ignores `share_target`,
-  so the share sheet hook needs a Shortcut or a native extension (see README).
-
-## Cost
-
-$0 up to roughly 1,300 rewrites/day across the free tiers. Past that,
-Cloudflare bills $0.011 per 1,000 neurons — pennies — while Groq and
-OpenRouter hard-stop until their daily windows reset.
+### If a reminder didn't arrive
+- Env vars set in Vercel? (VAPID ×3, Upstash ×2, CRON_SECRET)
+- Is the cron actually running every minute? (Pro, or cron-job.org pinger)
+- Notifications enabled in Settings, and OS notifications allowed for the site?
+- iPhone: was it added to the Home Screen before enabling?

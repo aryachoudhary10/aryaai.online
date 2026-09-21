@@ -1,69 +1,40 @@
-// Minimal app-shell service worker.
-// Chrome will not offer "Install app" on Android without a service worker that
-// has a fetch handler, so this is what makes Rephrase installable -- and it
-// means the shell opens instantly and offline.
-//
-// Rewriting itself always needs the network; only the shell is cached.
+// Arya service worker — receives push and shows the notification.
+const ICON = "https://d8j0ntlcm91z4.cloudfront.net/user_2w39JZ8pq7Uftm12HiS8wgQUgPt/hf_20260617_155511_400611e2-332d-47c4-87a9-48e2ad6b242e.png";
 
-const VERSION = "v1";
-const SHELL = `rephrase-shell-${VERSION}`;
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 
-// Bump VERSION to invalidate. Only same-origin static assets go in here.
-const PRECACHE = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
+self.addEventListener("push", (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; }
+  catch { data = { title: "Arya", body: event.data ? event.data.text() : "" }; }
 
-self.addEventListener("install", (e) => {
-  e.waitUntil(
-    caches.open(SHELL)
-      .then((c) => c.addAll(PRECACHE))
-      .then(() => self.skipWaiting())
-      .catch(() => self.skipWaiting()) // a failed precache must not block install
-  );
+  const title = data.title || "Arya";
+  const options = {
+    body: data.body || "",
+    icon: ICON,
+    badge: ICON,
+    tag: data.id || undefined,
+    renotify: true,
+    data: { url: data.url || "/" },
+    actions: [
+      { action: "open", title: "Open" },
+      { action: "done", title: "Got it" },
+    ],
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
-self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== SHELL).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener("fetch", (e) => {
-  const { request } = e;
-  if (request.method !== "GET") return;
-
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-  // Never cache the API -- a stale rewrite is worse than no rewrite.
-  if (url.pathname.startsWith("/api/")) return;
-
-  // Navigations: network first so shared text and fresh builds always win,
-  // falling back to the cached shell when offline.
-  if (request.mode === "navigate") {
-    e.respondWith(
-      fetch(request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(SHELL).then((c) => c.put("/", copy)).catch(() => {});
-          return res;
-        })
-        .catch(() => caches.match("/").then((r) => r || Response.error()))
-    );
-    return;
-  }
-
-  // Build assets are content-hashed, so cache-first is safe and fast.
-  e.respondWith(
-    caches.match(request).then(
-      (hit) =>
-        hit ||
-        fetch(request).then((res) => {
-          if (res.ok && res.type === "basic") {
-            const copy = res.clone();
-            caches.open(SHELL).then((c) => c.put(request, copy)).catch(() => {});
-          }
-          return res;
-        })
-    )
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  if (event.action === "done") return;
+  const url = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (c.url.includes(self.location.origin)) { c.focus(); if (c.navigate) c.navigate(url); return; }
+      }
+      return self.clients.openWindow(url);
+    })
   );
 });

@@ -1,194 +1,119 @@
-# Rephrase
+# Arya — Your Second Brain
 
-Rewrite any text in the tone you need. No Gemini, no OpenAI, no Anthropic —
-the backend runs open-weights models on free tiers, and falls over between
-providers so one dead free tier doesn't take the app down.
+A calm, no-friction place to empty your mind. You arrive, you dump a thought —
+Arya extracts the people, places, dates and reminders and connects them. Flip to
+**Ask** to get any of it back. Installable as a phone/desktop shortcut.
 
-Mobile-first PWA. Install it to your home screen and it behaves like an app.
+**Local-first & private by design.** Every person's memories live in *their own
+browser* (localStorage) — nothing is stored on a server. Each user brings their
+own **Google Gemini** API key, entered in Settings and kept only on their device.
+No accounts, no login, no shared database. That's also why it deploys anywhere as
+plain static files.
 
----
+- **Home (`/`)** — one screen, one input, a **Dump / Ask** toggle.
+- **Timeline (`/timeline`)** — dated moments arranged into your story.
+- **Settings (`/settings`)** — paste your Gemini key, export or wipe your data.
 
-## How it works
-
-```
-Browser  ──POST /api/rephrase──►  rate limit (Upstash)
-                                        │
-                                        ▼
-                             provider chain, in order
-                       ┌────────────────┼────────────────┐
-                  Cloudflare          Groq          OpenRouter
-                  Workers AI      (Llama 3.3)       (DeepSeek)
-                       └────────────────┴────────────────┘
-                              first one that answers wins
-```
-
-Rephrasing is one of the few tasks where open-weights models genuinely match
-frontier models — it isn't a reasoning problem. A 24–70B open model rewriting a
-paragraph is essentially indistinguishable from GPT-4-class output.
-
-### Provider free tiers (September 2026)
-
-| Provider | Free allowance | Default model |
-|---|---|---|
-| Cloudflare Workers AI | 10,000 neurons/day (~1,300 rewrites), no card | `@cf/meta/llama-4-scout-17b-16e-instruct` |
-| Groq | 30 req/min; 70B: 1,000 req + 100k tok/day | `llama-3.3-70b-versatile` |
-| OpenRouter | 50 req/day, or 1,000/day after a one-time $10 | `deepseek/deepseek-chat-v3:free` |
-
-Cloudflare leads because it bills cheap overage ($0.011/1k neurons) instead of
-hard-failing at the cap — which matters when real users hit the site.
-
-> Free tiers die without notice. Cerebras removed its permanent free tier in
-> July 2026. That's why everything provider-specific lives in `lib/providers/`
-> behind one interface — adding or reordering a backend touches nothing else.
+**Stack:** Next.js (App Router), fully client-side. Without a key it falls back to
+a built-in parser, so it works immediately.
 
 ---
 
-## Setup
-
+## Run locally
 ```bash
+cd arya-next
 npm install
-cp .env.example .env.local     # fill in at least one provider
 npm run dev
 ```
-
-You need **at least one** provider key. `.env.example` has the signup links.
-
-```bash
-npm test               # provider fallover + output parsing (fast, no browser)
-npm run test:browser   # replacement, bookmarklet, extension (needs Chromium)
-npm run test:all
-npm run build
-```
-
-### Deploy
-
-See [DEPLOY.md](./DEPLOY.md). Vercel is a one-click deploy; the API route runs
-on the edge runtime.
+Open http://localhost:3000. Go to **Settings**, paste a Gemini key
+(free at https://aistudio.google.com/apikey) — or skip it and use the built-in parser.
 
 ---
 
-## Using it anywhere you type
+## Deploy to Vercel + point aryaai.online at it
 
-This is a website, not an app — and a true phone keyboard is the one thing a
-website genuinely cannot be. Android keyboards must be an `InputMethodService`
-and iOS keyboards a keyboard extension; both have to ship inside a signed app
-from the store. There is no web path to either.
+There are no secrets to configure — the whole app is static and each user supplies
+their own key in the browser. So deployment is simple.
 
-Everything short of that is covered, and `/tools` on the live site hands each
-one out:
+1. **Push to GitHub.** Put the `arya-next` folder in a repo (e.g. `arya`).
+   (Move it out of OneDrive first to avoid file-lock issues — see note below.)
+2. **Import to Vercel.** vercel.com → *Add New → Project* → pick the repo.
+   Framework auto-detects as **Next.js**. No environment variables needed. Deploy.
+3. **Add your domain.** Project → *Settings → Domains* → add `aryaai.online`
+   (and `www.aryaai.online`). Vercel shows the exact DNS records.
+4. **Update DNS at your registrar** (wherever aryaai.online is managed):
+   - Apex `aryaai.online` → **A** record to `76.76.21.21`
+   - `www` → **CNAME** to `cname.vercel-dns.com`
+   (Vercel will display the current values to use — follow those if they differ.)
+5. Wait for DNS to propagate; Vercel issues HTTPS automatically. Done — Arya is
+   now your homepage at aryaai.online, and you can Add to Home Screen.
 
-| Route | Where it works | In-place rewrite? |
-|---|---|---|
-| **Bookmarklet** | Every browser, **including Safari on iPhone** | Yes |
-| **Browser extension** | Chrome, Edge, Brave, Firefox; Android via Firefox or Kiwi | Yes |
-| **Share sheet** | Android (PWA `share_target`); iOS via a Shortcut | Opens the site |
-
-"In-place" means the rewrite replaces what you selected, in the field you were
-typing in — you never leave the page.
-
-### Browser extension
-
-Lives in `extension/`. Adds **Rephrase** to the right-click menu in every text
-field, plus <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> and a toolbar popup.
-
-It isn't in any store — load it unpacked:
-
-- **Chrome / Edge / Brave** — `chrome://extensions` → enable *Developer mode* →
-  *Load unpacked* → pick `extension/`
-- **Firefox** — `about:debugging#/runtime/this-firefox` → *Load Temporary
-  Add-on* → pick `extension/manifest.json`
-- **Android** — Firefox or Kiwi Browser, same as desktop. This is how you get
-  in-place rewriting on a phone without an app.
-
-Then open its settings and point **Site URL** at your deployment.
-
-Safari is the gap: its extensions require a native app wrapper built in Xcode.
-Use the bookmarklet there.
-
-### Bookmarklet
-
-Generated per-deployment at `/tools`, with your origin baked in, so it works
-without the extension and without an install. On a phone: save any bookmark,
-rename it *Rephrase*, then paste the code over its URL. Type anywhere, pick it
-from the address bar.
-
-### Share sheet
-
-Installing the PWA registers `share_target`, so Android lists Rephrase wherever
-you tap Share. iOS ignores that; a Shortcut that POSTs to `/api/rephrase` and is
-enabled for the share sheet gets you the same thing with no native code.
-
-### Why replacement is fiddly
-
-Gmail, X and Notion all use React, which tracks input values internally and
-silently discards a plain `el.value = "..."`. Both the extension and the
-bookmarklet write through the prototype's native value setter instead, then
-dispatch a bubbling `input` event, so the framework sees a real edit.
-`test/replace-react.test.mjs` asserts both halves of this — that the naive
-approach fails, and that the shipped one works.
-
-### If you ever do want a real keyboard
-
-An Android `PROCESS_TEXT` activity is the cheap middle step: a manifest intent
-filter puts **Rephrase** in the text-selection popup next to Copy/Paste, and
-`setResult()` writes the rewrite back into the original field. It needs a thin
-native wrapper, but no `InputMethodService`. A full IME means rendering every
-key, autocorrect, layouts and languages — only worth it if the keyboard becomes
-the product.
+> This **replaces** whatever currently serves aryaai.online. If you'd rather keep
+> your old portfolio, add it on a subdomain like `brain.aryaai.online` instead.
 
 ---
 
-## Project layout
+## Notifications (Web Push) setup
 
-```
-app/
-  page.jsx                  UI (client component, statically prerendered)
-  tools/page.jsx            bookmarklet generator + install instructions
-  layout.jsx                fonts, metadata, theme bootstrap
-  globals.css               design tokens + mobile layout
-  manifest.js               PWA manifest incl. Android share_target
-  _components/
-    ThemeToggle.jsx         system / light / dark
-    useKeyboardInset.js     lifts the action bar above the on-screen keyboard
-  api/rephrase/route.js     edge route: validate → rate limit → generate
-extension/                  browser extension (MV3), load unpacked
-  background.js             context menu, keyboard command, the network call
-  content.js                selection reading, the picker, in-place replacement
-lib/
-  bookmarklet.js            self-contained bookmarklet, origin injected at render
-  prompt.js                 prompts, tone definitions, output parsing
-  ratelimit.js              per-IP limits on Upstash Redis
-  providers/
-    index.js                the fallover chain
-    cloudflare.js           primary
-    groq.js                 fallback
-    openrouter.js           second fallback
-test/                       fallover, parsing, replacement, extension, bookmarklet
-```
+Dated reminders and birthdays you dump are delivered as push notifications —
+**even when the app is closed** — via a small serverless backend (Vercel) + Upstash
+Redis. The notification wording is written on your device with your Gemini key; the
+server only schedules and delivers it.
 
-## Mobile behaviour worth knowing about
+One-time setup:
 
-These are deliberate and easy to break by accident:
+1. **VAPID keys** — run `npx web-push generate-vapid-keys` (gives a public + private key).
+2. **Upstash Redis** — create a free DB at https://console.upstash.com and copy the
+   REST URL + token.
+3. **Env vars** — add these locally in `.env.local` **and** in Vercel → Settings →
+   Environment Variables:
+   - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (same value as the public key)
+   - `VAPID_SUBJECT` (e.g. `mailto:you@example.com`)
+   - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+   - `CRON_SECRET` (any long random string)
+4. **Scheduler** — `vercel.json` already runs `/api/dispatch` every minute via Vercel Cron.
+   - On Vercel **Pro**, per-minute cron works as-is.
+   - On the **Hobby** (free) plan cron only fires once/day, so point a free external
+     pinger at it every minute instead:
+     `https://aryaai.online/api/dispatch?secret=YOUR_CRON_SECRET` (e.g. cron-job.org).
+5. **Turn it on** — open the app → **Settings → Enable notifications → Send a test**.
+   On iPhone, Add to Home Screen first (Apple requires an installed PWA for web push).
 
-- **Textarea is 16px.** Anything smaller makes iOS Safari zoom the viewport on focus.
-- **`useKeyboardInset`** reads `visualViewport` because iOS doesn't resize the
-  layout viewport for the on-screen keyboard, so a `position: fixed` bar ends up
-  buried under it. Android usually resizes instead, where the hook is a no-op.
-- **No `useSearchParams`.** It opts the route out of static rendering, which
-  leaves phones on a blank screen until the JS bundle lands. The query string is
-  read from `window.location` in an effect instead.
-- **Safe-area insets** on the header and action bar, for notches and home indicators.
-- **`100dvh`**, not `100vh` — mobile browser chrome changes the viewport height.
-- Pinch-zoom is left enabled. Disabling it is an accessibility failure.
+How it flows: enable → your device subscribes (`/api/subscribe`) → each dated reminder
+is scheduled with ready-made copy (`/api/schedule`) → the cron hits `/api/dispatch`,
+finds what's due, and pushes it. Your service worker (`public/sw.js`) shows it with
+"Open" / "Got it" actions.
 
-## Privacy
+## How memory & retrieval work
 
-The API sends `Access-Control-Allow-Origin: *` so the extension and bookmarklet
-can call it from other origins. That is safe only because the endpoint takes no
-cookies or auth — it grants the ability to call, not access to anything private.
-Abuse stays bounded by the per-IP rate limit.
+**Storage (in your browser).** Everything is a JSON document in `localStorage`:
+`memories` (raw notes), `entities` (people/companies/places with their relation,
+company, place, prefs), `events`, and `reminders`. Entities reference each other by
+name, so it's a lightweight *implicit graph* (you → Riya → Google), not a heavyweight
+graph database. Embedding vectors are cached separately in `arya:vectors:v1`.
 
-Text typed here is sent to your server and on to whichever provider answers.
-That is a real trade against the "stays on your device" model — say so plainly
-in the UI if you keep that promise elsewhere. Nothing is logged or stored
-server-side beyond a per-IP request counter in Redis.
+**Retrieval (what Ask sends to Gemini).** Ask does **not** send your whole brain.
+It uses classic on-device RAG (`lib/retriever.js`):
+1. Each memory is embedded once (Gemini embeddings, 256-dim) and cached locally.
+2. Your question is embedded, then ranked against every memory by **cosine
+   similarity** (exact brute-force — fast for a personal brain).
+3. A **graph-style boost** lifts memories that mention an entity named in your
+   question.
+4. Only the top ~10 most relevant memories are sent to the model to answer.
+
+Brute-force cosine is exact and quick at this scale; an ANN index like HNSW would
+only matter at millions of vectors and can be dropped into `retriever.js` later.
+
+## Notes
+- **Data is per-device.** Clearing the browser's site data wipes your memories.
+  Use **Settings → Export JSON** to back them up. (A cloud-sync option could be
+  added later if you want.)
+- **App icon** currently loads from an image CDN. To make it fully self-hosted,
+  drop a 512×512 PNG into `public/` and point `app/manifest.js` + `app/layout.jsx`
+  at it.
+- **Don't develop inside OneDrive** — it locks `node_modules`/`.next` mid-sync.
+  Use a path like `C:\dev\arya-next`.
+
+---
+*Your thoughts never leave your device, except your own Gemini calls to Google.*
