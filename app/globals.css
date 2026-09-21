@@ -515,3 +515,174 @@ textarea::placeholder { color: var(--ink-faint); }
   .toast { bottom: 24px; }
   .go { flex: none; padding-inline: 28px; }
 }
+
+/* --- /tools: prose layout ---------------------------------------------- */
+
+.prose { padding-top: 24px; }
+
+.prose h1 {
+  margin: 0 0 10px;
+  font-size: 27px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.prose .lede {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: var(--ink-muted);
+  max-width: 62ch;
+}
+
+.prose section {
+  margin-top: 34px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.prose h2 {
+  margin: 0 0 10px;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.prose p {
+  margin: 0 0 12px;
+  max-width: 62ch;
+  color: var(--ink-muted);
+  font-size: 14.5px;
+}
+
+.prose b { color: var(--ink); font-weight: 600; }
+
+.prose code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: .9em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-sunk);
+  color: var(--ink);
+}
+
+.prose kbd {
+  font: inherit;
+  font-size: 12px;
+  padding: 2px 6px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.callout {
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-edge);
+  color: var(--ink) !important;
+  font-size: 14px;
+}
+
+.field-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 18px 0 6px;
+}
+
+.select {
+  width: 100%;
+  max-width: 420px;
+  min-height: 44px;
+  padding: 0 12px;
+  /* 16px keeps iOS Safari from zooming the viewport when the picker opens. */
+  font-size: 16px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.drag-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 16px 0 6px !important;
+}
+
+/* Reads as a draggable object rather than a link, because that is what it is. */
+.drag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: grab;
+  box-shadow: var(--shadow);
+}
+.drag:active { cursor: grabbing; }
+
+.drag-hint { font-size: 13px; color: var(--ink-faint); }
+
+/* Dragging needs a bookmarks bar, which phones do not have -- the <details>
+   below carries the phone instructions instead. */
+@media (max-width: 719px) {
+  .drag-row { display: none !important; }
+}
+
+.prose details {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.prose summary {
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  list-style-position: inside;
+}
+.prose details[open] summary { border-bottom: 1px solid var(--border); }
+.prose details ol {
+  margin: 12px 0;
+  padding-inline-start: 34px;
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+.prose details ol li { margin-bottom: 6px; }
+
+.copybox { padding: 0 14px 14px; }
+.copybox textarea {
+  width: 100%;
+  min-height: 0;
+  max-height: none;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  resize: vertical;
+  word-break: break-all;
+}
+.copybox .ghost { margin-top: 6px; border: 1px solid var(--border); }
+
+a.brand { text-decoration: none; color: inherit; }
+
+@media (min-width: 720px) {
+  .prose h1 { font-size: 32px; }
+  .prose .bar-space { display: none; }
+}

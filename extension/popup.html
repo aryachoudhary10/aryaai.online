@@ -1,0 +1,25 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Rephrase</title>
+<style>
+  :root { color-scheme: light dark; --bg:#fff; --fg:#11171b; --muted:#8494a0; --line:#d9e2e7; --sunk:#f4f7f8; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161d22; --fg:#e6edf2; --muted:#6b7d89; --line:#27313a; --sunk:#10171b; }
+  }
+  body { width: 248px; margin: 0; padding: 10px; background: var(--bg); color: var(--fg);
+         font: 14px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  h1 { margin: 2px 4px 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  button.tone { display: block; width: 100%; text-align: left; padding: 9px 10px; margin-bottom: 2px;
+                border: 0; border-radius: 7px; background: none; color: inherit; font: inherit; cursor: pointer; }
+  button.tone:hover, button.tone:focus-visible { background: var(--sunk); outline: none; }
+  footer { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+  a { color: var(--muted); font-size: 12px; text-decoration: none; }
+  a:hover { color: var(--fg); text-decoration: underline; }
+</style>
+<h1>Rewrite selection as</h1>
+<div id="list"></div>
+<footer>
+  <a href="#" id="options">Settings</a>
+  <a href="#" id="site" style="margin-left:auto">Open site</a>
+</footer>
+<script src="popup.js"></script>

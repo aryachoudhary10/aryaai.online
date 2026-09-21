@@ -6,6 +6,22 @@ import { buildSystem, buildUser, parseVariants, TONES, MAX_INPUT, DEFAULT_TONE }
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
+// The browser extension and the bookmarklet call this from other origins, so
+// CORS has to be open. That is safe here only because the endpoint takes no
+// cookies or auth: "*" grants the ability to call it, not access to anything
+// private. Abuse is bounded by the per-IP rate limit, so a hostile page can at
+// worst burn its own visitor's daily quota.
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Max-Age": "86400",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS });
+}
+
 export async function POST(req) {
   let body;
   try {
@@ -27,7 +43,7 @@ export async function POST(req) {
   if (!limit.ok) {
     return NextResponse.json(
       { error: limit.reason },
-      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+      { status: 429, headers: { ...CORS, "Retry-After": String(limit.retryAfter) } }
     );
   }
 
@@ -42,13 +58,16 @@ export async function POST(req) {
       return bad("The model returned something unusable. Try again.", 502);
     }
 
-    return NextResponse.json({
-      variants,
-      tone,
-      provider,
-      model,
-      remainingToday: limit.remainingToday ?? null,
-    });
+    return NextResponse.json(
+      {
+        variants,
+        tone,
+        provider,
+        model,
+        remainingToday: limit.remainingToday ?? null,
+      },
+      { headers: CORS }
+    );
   } catch (e) {
     if (e.code === "NO_PROVIDER") {
       return bad("No rephrase provider is configured. Set CF_ACCOUNT_ID + CF_API_TOKEN or GROQ_API_KEY.", 503);
@@ -60,14 +79,17 @@ export async function POST(req) {
 
 // Lets the UI show which backends are live without exposing any key.
 export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    providers: configuredProviders(),
-    tones: Object.entries(TONES).map(([id, t]) => ({ id, ...t })),
-    maxInput: MAX_INPUT,
-  });
+  return NextResponse.json(
+    {
+      ok: true,
+      providers: configuredProviders(),
+      tones: Object.entries(TONES).map(([id, t]) => ({ id, ...t })),
+      maxInput: MAX_INPUT,
+    },
+    { headers: CORS }
+  );
 }
 
 function bad(message, status) {
-  return NextResponse.json({ error: message }, { status });
+  return NextResponse.json({ error: message }, { status, headers: CORS });
 }

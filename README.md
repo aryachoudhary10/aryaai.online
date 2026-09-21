@@ -54,7 +54,9 @@ npm run dev
 You need **at least one** provider key. `.env.example` has the signup links.
 
 ```bash
-npm test      # provider fallover + output parsing
+npm test               # provider fallover + output parsing (fast, no browser)
+npm run test:browser   # replacement, bookmarklet, extension (needs Chromium)
+npm run test:all
 npm run build
 ```
 
@@ -65,74 +67,74 @@ on the edge runtime.
 
 ---
 
-## Putting it in the keyboard
+## Using it anywhere you type
 
-You asked whether this can live in the keyboard itself. Short answer: **a web
-app can't be a keyboard** — both platforms require a native extension for that.
-But you can get most of the benefit for much less work, and there's a clear
-order to do it in.
+This is a website, not an app — and a true phone keyboard is the one thing a
+website genuinely cannot be. Android keyboards must be an `InputMethodService`
+and iOS keyboards a keyboard extension; both have to ship inside a signed app
+from the store. There is no web path to either.
 
-### Android
+Everything short of that is covered, and `/tools` on the live site hands each
+one out:
 
-| Approach | Effort | Reach | Native code? |
-|---|---|---|---|
-| **1. Share sheet** (built) | Done | Any app with a Share button | No |
-| **2. Text-selection action** | ~1 day | Select text anywhere → "Rephrase" in the popup | Thin wrapper |
-| **3. Real keyboard** | Weeks | Every text field, no app switch | Full IME |
+| Route | Where it works | In-place rewrite? |
+|---|---|---|
+| **Bookmarklet** | Every browser, **including Safari on iPhone** | Yes |
+| **Browser extension** | Chrome, Edge, Brave, Firefox; Android via Firefox or Kiwi | Yes |
+| **Share sheet** | Android (PWA `share_target`); iOS via a Shortcut | Opens the site |
 
-**Already working:** the PWA declares a `share_target` in `app/manifest.js`, so
-once it's installed, Rephrase appears in Android's system share sheet. Select
-text → Share → Rephrase, and it opens with the text loaded.
+"In-place" means the rewrite replaces what you selected, in the field you were
+typing in — you never leave the page.
 
-**The best value by far is #2.** Android lets any app add an entry to the text
-selection popup — the same menu as Copy/Paste — with a manifest intent filter
-and no keyboard work at all:
+### Browser extension
 
-```xml
-<activity android:name=".ProcessTextActivity" android:label="Rephrase">
-  <intent-filter>
-    <action android:name="android.intent.action.PROCESS_TEXT" />
-    <category android:name="android.intent.category.DEFAULT" />
-    <data android:mimeType="text/plain" />
-  </intent-filter>
-</activity>
-```
+Lives in `extension/`. Adds **Rephrase** to the right-click menu in every text
+field, plus <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> and a toolbar popup.
 
-The selected text arrives as `Intent.EXTRA_PROCESS_TEXT`. Crucially, you can
-**write the rewrite straight back into the original field** by returning
-`setResult()` with the replacement in the same extra — the user never leaves
-their email or WhatsApp. That is 90% of the "it's in my keyboard" feeling for a
-fraction of the cost. The activity can be a thin shell hosting this web UI.
+It isn't in any store — load it unpacked:
 
-**#3, a real keyboard**, means an `InputMethodService` in Kotlin: you render
-every key yourself, handle autocorrect, layouts, languages, dark mode, and
-landscape. Users must then enable it in Settings and switch to it. Only worth it
-if the keyboard becomes the product.
+- **Chrome / Edge / Brave** — `chrome://extensions` → enable *Developer mode* →
+  *Load unpacked* → pick `extension/`
+- **Firefox** — `about:debugging#/runtime/this-firefox` → *Load Temporary
+  Add-on* → pick `extension/manifest.json`
+- **Android** — Firefox or Kiwi Browser, same as desktop. This is how you get
+  in-place rewriting on a phone without an app.
 
-### iOS
+Then open its settings and point **Site URL** at your deployment.
 
-Stricter. Two realistic paths:
+Safari is the gap: its extensions require a native app wrapper built in Xcode.
+Use the bookmarklet there.
 
-- **Share Sheet / Action Extension** — a small Swift extension that appears when
-  you select text and tap Share. Same idea as Android's #1.
-- **Custom Keyboard Extension** — technically possible, but to reach your API it
-  must set [`RequestsOpenAccess`](https://developer.apple.com/documentation/bundleresources/information-property-list/nsextension/nsextensionattributes/requestsopenaccess)
-  and the user must manually toggle **Allow Full Access** in Settings, which
-  shows a scary warning saying the keyboard can see everything they type. Most
-  people decline. Plan for low opt-in.
+### Bookmarklet
 
-iOS ignores `share_target`, so the PWA can't hook the share sheet on its own.
+Generated per-deployment at `/tools`, with your origin baked in, so it works
+without the extension and without an install. On a phone: save any bookmark,
+rename it *Rephrase*, then paste the code over its URL. Type anywhere, pick it
+from the address bar.
 
-**Zero-code iOS option worth trying first:** the Shortcuts app can call
-`/api/rephrase` directly and appears in the share sheet. Good way to validate
-demand before writing any Swift.
+### Share sheet
 
-### Suggested order
+Installing the PWA registers `share_target`, so Android lists Rephrase wherever
+you tap Share. iOS ignores that; a Shortcut that POSTs to `/api/rephrase` and is
+enabled for the share sheet gets you the same thing with no native code.
 
-1. **Ship the PWA** — works everywhere today, no app stores.
-2. **Android `PROCESS_TEXT`** — biggest win per hour spent, replaces text in place.
-3. **iOS Shortcut** — validate iOS demand with no native code.
-4. **Native extensions / IME** — only once usage justifies it.
+### Why replacement is fiddly
+
+Gmail, X and Notion all use React, which tracks input values internally and
+silently discards a plain `el.value = "..."`. Both the extension and the
+bookmarklet write through the prototype's native value setter instead, then
+dispatch a bubbling `input` event, so the framework sees a real edit.
+`test/replace-react.test.mjs` asserts both halves of this — that the naive
+approach fails, and that the shipped one works.
+
+### If you ever do want a real keyboard
+
+An Android `PROCESS_TEXT` activity is the cheap middle step: a manifest intent
+filter puts **Rephrase** in the text-selection popup next to Copy/Paste, and
+`setResult()` writes the rewrite back into the original field. It needs a thin
+native wrapper, but no `InputMethodService`. A full IME means rendering every
+key, autocorrect, layouts and languages — only worth it if the keyboard becomes
+the product.
 
 ---
 
@@ -141,6 +143,7 @@ demand before writing any Swift.
 ```
 app/
   page.jsx                  UI (client component, statically prerendered)
+  tools/page.jsx            bookmarklet generator + install instructions
   layout.jsx                fonts, metadata, theme bootstrap
   globals.css               design tokens + mobile layout
   manifest.js               PWA manifest incl. Android share_target
@@ -148,7 +151,11 @@ app/
     ThemeToggle.jsx         system / light / dark
     useKeyboardInset.js     lifts the action bar above the on-screen keyboard
   api/rephrase/route.js     edge route: validate → rate limit → generate
+extension/                  browser extension (MV3), load unpacked
+  background.js             context menu, keyboard command, the network call
+  content.js                selection reading, the picker, in-place replacement
 lib/
+  bookmarklet.js            self-contained bookmarklet, origin injected at render
   prompt.js                 prompts, tone definitions, output parsing
   ratelimit.js              per-IP limits on Upstash Redis
   providers/
@@ -156,7 +163,7 @@ lib/
     cloudflare.js           primary
     groq.js                 fallback
     openrouter.js           second fallback
-test/                       fallover + parsing tests
+test/                       fallover, parsing, replacement, extension, bookmarklet
 ```
 
 ## Mobile behaviour worth knowing about
@@ -175,6 +182,11 @@ These are deliberate and easy to break by accident:
 - Pinch-zoom is left enabled. Disabling it is an accessibility failure.
 
 ## Privacy
+
+The API sends `Access-Control-Allow-Origin: *` so the extension and bookmarklet
+can call it from other origins. That is safe only because the endpoint takes no
+cookies or auth — it grants the ability to call, not access to anything private.
+Abuse stays bounded by the per-IP rate limit.
 
 Text typed here is sent to your server and on to whichever provider answers.
 That is a real trade against the "stays on your device" model — say so plainly
