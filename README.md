@@ -1,119 +1,182 @@
-# Arya — Your Second Brain
+# Rephrase
 
-A calm, no-friction place to empty your mind. You arrive, you dump a thought —
-Arya extracts the people, places, dates and reminders and connects them. Flip to
-**Ask** to get any of it back. Installable as a phone/desktop shortcut.
+Rewrite any text in the tone you need. No Gemini, no OpenAI, no Anthropic —
+the backend runs open-weights models on free tiers, and falls over between
+providers so one dead free tier doesn't take the app down.
 
-**Local-first & private by design.** Every person's memories live in *their own
-browser* (localStorage) — nothing is stored on a server. Each user brings their
-own **Google Gemini** API key, entered in Settings and kept only on their device.
-No accounts, no login, no shared database. That's also why it deploys anywhere as
-plain static files.
-
-- **Home (`/`)** — one screen, one input, a **Dump / Ask** toggle.
-- **Timeline (`/timeline`)** — dated moments arranged into your story.
-- **Settings (`/settings`)** — paste your Gemini key, export or wipe your data.
-
-**Stack:** Next.js (App Router), fully client-side. Without a key it falls back to
-a built-in parser, so it works immediately.
+Mobile-first PWA. Install it to your home screen and it behaves like an app.
 
 ---
 
-## Run locally
+## How it works
+
+```
+Browser  ──POST /api/rephrase──►  rate limit (Upstash)
+                                        │
+                                        ▼
+                             provider chain, in order
+                       ┌────────────────┼────────────────┐
+                  Cloudflare          Groq          OpenRouter
+                  Workers AI      (Llama 3.3)       (DeepSeek)
+                       └────────────────┴────────────────┘
+                              first one that answers wins
+```
+
+Rephrasing is one of the few tasks where open-weights models genuinely match
+frontier models — it isn't a reasoning problem. A 24–70B open model rewriting a
+paragraph is essentially indistinguishable from GPT-4-class output.
+
+### Provider free tiers (September 2026)
+
+| Provider | Free allowance | Default model |
+|---|---|---|
+| Cloudflare Workers AI | 10,000 neurons/day (~1,300 rewrites), no card | `@cf/meta/llama-4-scout-17b-16e-instruct` |
+| Groq | 30 req/min; 70B: 1,000 req + 100k tok/day | `llama-3.3-70b-versatile` |
+| OpenRouter | 50 req/day, or 1,000/day after a one-time $10 | `deepseek/deepseek-chat-v3:free` |
+
+Cloudflare leads because it bills cheap overage ($0.011/1k neurons) instead of
+hard-failing at the cap — which matters when real users hit the site.
+
+> Free tiers die without notice. Cerebras removed its permanent free tier in
+> July 2026. That's why everything provider-specific lives in `lib/providers/`
+> behind one interface — adding or reordering a backend touches nothing else.
+
+---
+
+## Setup
+
 ```bash
-cd arya-next
 npm install
+cp .env.example .env.local     # fill in at least one provider
 npm run dev
 ```
-Open http://localhost:3000. Go to **Settings**, paste a Gemini key
-(free at https://aistudio.google.com/apikey) — or skip it and use the built-in parser.
+
+You need **at least one** provider key. `.env.example` has the signup links.
+
+```bash
+npm test      # provider fallover + output parsing
+npm run build
+```
+
+### Deploy
+
+See [DEPLOY.md](./DEPLOY.md). Vercel is a one-click deploy; the API route runs
+on the edge runtime.
 
 ---
 
-## Deploy to Vercel + point aryaai.online at it
+## Putting it in the keyboard
 
-There are no secrets to configure — the whole app is static and each user supplies
-their own key in the browser. So deployment is simple.
+You asked whether this can live in the keyboard itself. Short answer: **a web
+app can't be a keyboard** — both platforms require a native extension for that.
+But you can get most of the benefit for much less work, and there's a clear
+order to do it in.
 
-1. **Push to GitHub.** Put the `arya-next` folder in a repo (e.g. `arya`).
-   (Move it out of OneDrive first to avoid file-lock issues — see note below.)
-2. **Import to Vercel.** vercel.com → *Add New → Project* → pick the repo.
-   Framework auto-detects as **Next.js**. No environment variables needed. Deploy.
-3. **Add your domain.** Project → *Settings → Domains* → add `aryaai.online`
-   (and `www.aryaai.online`). Vercel shows the exact DNS records.
-4. **Update DNS at your registrar** (wherever aryaai.online is managed):
-   - Apex `aryaai.online` → **A** record to `76.76.21.21`
-   - `www` → **CNAME** to `cname.vercel-dns.com`
-   (Vercel will display the current values to use — follow those if they differ.)
-5. Wait for DNS to propagate; Vercel issues HTTPS automatically. Done — Arya is
-   now your homepage at aryaai.online, and you can Add to Home Screen.
+### Android
 
-> This **replaces** whatever currently serves aryaai.online. If you'd rather keep
-> your old portfolio, add it on a subdomain like `brain.aryaai.online` instead.
+| Approach | Effort | Reach | Native code? |
+|---|---|---|---|
+| **1. Share sheet** (built) | Done | Any app with a Share button | No |
+| **2. Text-selection action** | ~1 day | Select text anywhere → "Rephrase" in the popup | Thin wrapper |
+| **3. Real keyboard** | Weeks | Every text field, no app switch | Full IME |
 
----
+**Already working:** the PWA declares a `share_target` in `app/manifest.js`, so
+once it's installed, Rephrase appears in Android's system share sheet. Select
+text → Share → Rephrase, and it opens with the text loaded.
 
-## Notifications (Web Push) setup
+**The best value by far is #2.** Android lets any app add an entry to the text
+selection popup — the same menu as Copy/Paste — with a manifest intent filter
+and no keyboard work at all:
 
-Dated reminders and birthdays you dump are delivered as push notifications —
-**even when the app is closed** — via a small serverless backend (Vercel) + Upstash
-Redis. The notification wording is written on your device with your Gemini key; the
-server only schedules and delivers it.
+```xml
+<activity android:name=".ProcessTextActivity" android:label="Rephrase">
+  <intent-filter>
+    <action android:name="android.intent.action.PROCESS_TEXT" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <data android:mimeType="text/plain" />
+  </intent-filter>
+</activity>
+```
 
-One-time setup:
+The selected text arrives as `Intent.EXTRA_PROCESS_TEXT`. Crucially, you can
+**write the rewrite straight back into the original field** by returning
+`setResult()` with the replacement in the same extra — the user never leaves
+their email or WhatsApp. That is 90% of the "it's in my keyboard" feeling for a
+fraction of the cost. The activity can be a thin shell hosting this web UI.
 
-1. **VAPID keys** — run `npx web-push generate-vapid-keys` (gives a public + private key).
-2. **Upstash Redis** — create a free DB at https://console.upstash.com and copy the
-   REST URL + token.
-3. **Env vars** — add these locally in `.env.local` **and** in Vercel → Settings →
-   Environment Variables:
-   - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`
-   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (same value as the public key)
-   - `VAPID_SUBJECT` (e.g. `mailto:you@example.com`)
-   - `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
-   - `CRON_SECRET` (any long random string)
-4. **Scheduler** — `vercel.json` already runs `/api/dispatch` every minute via Vercel Cron.
-   - On Vercel **Pro**, per-minute cron works as-is.
-   - On the **Hobby** (free) plan cron only fires once/day, so point a free external
-     pinger at it every minute instead:
-     `https://aryaai.online/api/dispatch?secret=YOUR_CRON_SECRET` (e.g. cron-job.org).
-5. **Turn it on** — open the app → **Settings → Enable notifications → Send a test**.
-   On iPhone, Add to Home Screen first (Apple requires an installed PWA for web push).
+**#3, a real keyboard**, means an `InputMethodService` in Kotlin: you render
+every key yourself, handle autocorrect, layouts, languages, dark mode, and
+landscape. Users must then enable it in Settings and switch to it. Only worth it
+if the keyboard becomes the product.
 
-How it flows: enable → your device subscribes (`/api/subscribe`) → each dated reminder
-is scheduled with ready-made copy (`/api/schedule`) → the cron hits `/api/dispatch`,
-finds what's due, and pushes it. Your service worker (`public/sw.js`) shows it with
-"Open" / "Got it" actions.
+### iOS
 
-## How memory & retrieval work
+Stricter. Two realistic paths:
 
-**Storage (in your browser).** Everything is a JSON document in `localStorage`:
-`memories` (raw notes), `entities` (people/companies/places with their relation,
-company, place, prefs), `events`, and `reminders`. Entities reference each other by
-name, so it's a lightweight *implicit graph* (you → Riya → Google), not a heavyweight
-graph database. Embedding vectors are cached separately in `arya:vectors:v1`.
+- **Share Sheet / Action Extension** — a small Swift extension that appears when
+  you select text and tap Share. Same idea as Android's #1.
+- **Custom Keyboard Extension** — technically possible, but to reach your API it
+  must set [`RequestsOpenAccess`](https://developer.apple.com/documentation/bundleresources/information-property-list/nsextension/nsextensionattributes/requestsopenaccess)
+  and the user must manually toggle **Allow Full Access** in Settings, which
+  shows a scary warning saying the keyboard can see everything they type. Most
+  people decline. Plan for low opt-in.
 
-**Retrieval (what Ask sends to Gemini).** Ask does **not** send your whole brain.
-It uses classic on-device RAG (`lib/retriever.js`):
-1. Each memory is embedded once (Gemini embeddings, 256-dim) and cached locally.
-2. Your question is embedded, then ranked against every memory by **cosine
-   similarity** (exact brute-force — fast for a personal brain).
-3. A **graph-style boost** lifts memories that mention an entity named in your
-   question.
-4. Only the top ~10 most relevant memories are sent to the model to answer.
+iOS ignores `share_target`, so the PWA can't hook the share sheet on its own.
 
-Brute-force cosine is exact and quick at this scale; an ANN index like HNSW would
-only matter at millions of vectors and can be dropped into `retriever.js` later.
+**Zero-code iOS option worth trying first:** the Shortcuts app can call
+`/api/rephrase` directly and appears in the share sheet. Good way to validate
+demand before writing any Swift.
 
-## Notes
-- **Data is per-device.** Clearing the browser's site data wipes your memories.
-  Use **Settings → Export JSON** to back them up. (A cloud-sync option could be
-  added later if you want.)
-- **App icon** currently loads from an image CDN. To make it fully self-hosted,
-  drop a 512×512 PNG into `public/` and point `app/manifest.js` + `app/layout.jsx`
-  at it.
-- **Don't develop inside OneDrive** — it locks `node_modules`/`.next` mid-sync.
-  Use a path like `C:\dev\arya-next`.
+### Suggested order
+
+1. **Ship the PWA** — works everywhere today, no app stores.
+2. **Android `PROCESS_TEXT`** — biggest win per hour spent, replaces text in place.
+3. **iOS Shortcut** — validate iOS demand with no native code.
+4. **Native extensions / IME** — only once usage justifies it.
 
 ---
-*Your thoughts never leave your device, except your own Gemini calls to Google.*
+
+## Project layout
+
+```
+app/
+  page.jsx                  UI (client component, statically prerendered)
+  layout.jsx                fonts, metadata, theme bootstrap
+  globals.css               design tokens + mobile layout
+  manifest.js               PWA manifest incl. Android share_target
+  _components/
+    ThemeToggle.jsx         system / light / dark
+    useKeyboardInset.js     lifts the action bar above the on-screen keyboard
+  api/rephrase/route.js     edge route: validate → rate limit → generate
+lib/
+  prompt.js                 prompts, tone definitions, output parsing
+  ratelimit.js              per-IP limits on Upstash Redis
+  providers/
+    index.js                the fallover chain
+    cloudflare.js           primary
+    groq.js                 fallback
+    openrouter.js           second fallback
+test/                       fallover + parsing tests
+```
+
+## Mobile behaviour worth knowing about
+
+These are deliberate and easy to break by accident:
+
+- **Textarea is 16px.** Anything smaller makes iOS Safari zoom the viewport on focus.
+- **`useKeyboardInset`** reads `visualViewport` because iOS doesn't resize the
+  layout viewport for the on-screen keyboard, so a `position: fixed` bar ends up
+  buried under it. Android usually resizes instead, where the hook is a no-op.
+- **No `useSearchParams`.** It opts the route out of static rendering, which
+  leaves phones on a blank screen until the JS bundle lands. The query string is
+  read from `window.location` in an effect instead.
+- **Safe-area insets** on the header and action bar, for notches and home indicators.
+- **`100dvh`**, not `100vh` — mobile browser chrome changes the viewport height.
+- Pinch-zoom is left enabled. Disabling it is an accessibility failure.
+
+## Privacy
+
+Text typed here is sent to your server and on to whichever provider answers.
+That is a real trade against the "stays on your device" model — say so plainly
+in the UI if you keep that promise elsewhere. Nothing is logged or stored
+server-side beyond a per-IP request counter in Redis.

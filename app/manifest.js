@@ -1,19 +1,33 @@
-const ICON = "https://d8j0ntlcm91z4.cloudfront.net/user_2w39JZ8pq7Uftm12HiS8wgQUgPt/hf_20260617_155511_400611e2-332d-47c4-87a9-48e2ad6b242e.png";
+// PWA manifest. The share_target entry is what makes "Rephrase" appear in
+// Android's system share sheet: select text anywhere, Share, pick Rephrase,
+// and the text arrives at /?text=... already loaded. iOS ignores share_target
+// (see README for the Shortcuts workaround).
 
 export default function manifest() {
   return {
-    name: "Arya — Second Brain",
-    short_name: "Arya",
-    description: "Empty your mind. Arya remembers it for you.",
+    name: "Rephrase",
+    short_name: "Rephrase",
+    description: "Rewrite any text in the tone you need.",
     start_url: "/",
+    scope: "/",
     display: "standalone",
-    background_color: "#161a18",
-    theme_color: "#161a18",
-    orientation: "portrait",
+    orientation: "any",
+    background_color: "#f4f7f8",
+    theme_color: "#f4f7f8",
+    categories: ["productivity", "utilities"],
     icons: [
-      { src: ICON, sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: ICON, sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: ICON, sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+    share_target: {
+      action: "/",
+      method: "GET",
+      params: { title: "title", text: "text", url: "url" },
+    },
+    shortcuts: [
+      { name: "Make it formal", short_name: "Formal", url: "/?tone=formal" },
+      { name: "Make it concise", short_name: "Concise", url: "/?tone=concise" },
     ],
   };
 }
